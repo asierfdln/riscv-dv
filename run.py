@@ -453,7 +453,7 @@ def gcc_compile(test_list, output_dir, isa, mabi, opts, debug_cmd):
                     # underscores will be provided after all letter extensions.
                     # This assumption should hold true, as this is a
                     # requirement enforced by e.g. gcc
-                    test_isa = re.sub(r"(rv.+?)c", r"\1", test_isa)
+                    test_isa = re.sub(r"(rv.+?)c_", r"\1", test_isa)
             # If march/mabi is not defined in the test gcc_opts, use the default
             # setting from the command line.
             if not re.search('march', cmd):
