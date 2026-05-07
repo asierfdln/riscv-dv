@@ -343,8 +343,12 @@ class riscv_asm_program_gen extends uvm_object;
   virtual function void gen_program_end(int hart);
     if (hart == 0) begin
       // Use write_tohost to terminate spike simulation
+      instr_stream.push_back(".type write_tohost, @function");
       gen_section("write_tohost", {"sw gp, tohost, t5"});
+      instr_stream.push_back(".size write_tohost, .-write_tohost");
+      instr_stream.push_back(".type _exit, @function");
       gen_section("_exit", {"j write_tohost"});
+      instr_stream.push_back(".size _exit, .-_exit");
     end
   endfunction
 
@@ -1192,6 +1196,7 @@ class riscv_asm_program_gen extends uvm_object;
   //
   virtual function void gen_ecall_handler(int hart);
     string instr[$];
+    string label;
     bit atomic_supported = (RV32A inside {supported_isa}) ||
                            (RV64A inside {supported_isa});
     dump_perf_stats(instr);
@@ -1222,7 +1227,10 @@ class riscv_asm_program_gen extends uvm_object;
         instr.push_back("jal x0, 2b");
       end
     end
-    gen_section(get_label("ecall_handler", hart), instr);
+    label = get_label("ecall_handler", hart);
+    instr_stream.push_back($sformatf(".type %0s, @function", label));
+    gen_section(label, instr);
+    instr_stream.push_back($sformatf(".size %0s, .-%0s", label, label));
   endfunction
 
   // Ebreak trap handler
