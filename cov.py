@@ -45,9 +45,10 @@ def build_cov(out, cfg, cwd, opts_vec, opts_cov):
     argv = SimpleNamespace(**cfg)
     logging.info("Building the coverage collection framework")
     build_cmd = ("python3 {}/run.py --simulator {} --simulator_yaml {} "
-                 " --co -o {} --cov -tl {} {} --cmp_opts \"{} {}\" --noclean".format(
+                 " --co -o {} --cov -tl {} {} --gen_timeout {} "
+                 "--cmp_opts \"{} {}\" --noclean".format(
         cwd, argv.simulator, argv.simulator_yaml, out,
-        argv.testlist, argv.opts, opts_vec, opts_cov))
+        argv.testlist, argv.opts, argv.timeout, opts_vec, opts_cov))
     if argv.target:
         build_cmd += (" --target {}".format(argv.target))
     if argv.custom_target:
@@ -58,7 +59,7 @@ def build_cov(out, cfg, cwd, opts_vec, opts_cov):
         build_cmd += (" --lsf_cmd \"{}\"".format(argv.lsf_cmd))
         run_parallel_cmd([build_cmd], argv.timeout, debug_cmd=argv.debug)
     else:
-        run_cmd(build_cmd, debug_cmd=argv.debug)
+        run_cmd(build_cmd, argv.timeout, debug_cmd=argv.debug)
 
 
 def sim_cov(out, cfg, cwd, opts_vec, opts_cov, csv_list):
@@ -80,10 +81,12 @@ def sim_cov(out, cfg, cwd, opts_vec, opts_cov, csv_list):
     base_sim_cmd = (
         "python3 {}/run.py --simulator {} --simulator_yaml {} --noclean "
         "--so -o {} --cov -tl {} {} "
-        "-tn {} --steps gen --sim_opts \"<trace_csv_opts> {} {} <visualization>\" "
+        "-tn {} --steps gen --gen_timeout {} "
+        "--sim_opts \"<trace_csv_opts> {} {} <visualization>\" "
             .format(cwd, argv.simulator, argv.simulator_yaml, out,
                     argv.testlist,
-                    argv.opts, test_name, opts_vec, opts_cov))
+                    argv.opts, test_name, argv.timeout,
+                    opts_vec, opts_cov))
     if argv.simulator == "pyflow" and argv.enable_visualization:
         base_sim_cmd = re.sub("<visualization>", "--enable_visualization",
                               base_sim_cmd)
@@ -122,7 +125,7 @@ def sim_cov(out, cfg, cwd, opts_vec, opts_cov, csv_list):
             if argv.lsf_cmd == "":
                 logging.info(
                     "Processing batch {}/{}".format(file_idx + 1, batch_cnt))
-                run_cmd(sim_cmd, debug_cmd=argv.debug)
+                run_cmd(sim_cmd, timeout_s=argv.timeout, debug_cmd=argv.debug)
             else:
                 sim_cmd += (" --lsf_cmd \"{}\"".format(argv.lsf_cmd))
                 sim_cmd_list.append(sim_cmd)
