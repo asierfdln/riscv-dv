@@ -341,7 +341,8 @@ def do_simulate(sim_cmd, simulator, test_list, cwd, sim_opts, seed_gen,
                     # If ISA string does not include the compressed 'c'
                     # extension, then append the plusarg to disable compressed
                     # instructions
-                    if not re.search(r"^(rv(?:32|64|128)[a-z]+?)c(?=_|$)", isa):
+                    if not re.search(r"^(rv(?:32|64|128)[a-z]+?)"
+                                     r"c([a-z]*)(?=_|$)", isa):
                         cmd += "+disable_compressed_instr=1 "
                     if lsf_cmd:
                         cmd_list.append(cmd)
@@ -453,8 +454,9 @@ def gcc_compile(test_list, output_dir, isa, mabi, opts, debug_cmd):
                 # the plusarg `+disable_compressed_instr=1` is set in the
                 # generator options
                 if re.search('\+disable_compressed_instr=1', test['gen_opts']):
-                    test_isa = re.sub(r"^(rv(?:32|64|128)[a-z]+?)c(?=_|$)",
-                                      r"\1", test_isa)
+                    test_isa = re.sub(r"^(rv(?:32|64|128)[a-z]+?)"
+                                      r"c([a-z]*)(?=_|$)",
+                                      r"\1\2", test_isa)
             # If march/mabi is not defined in the test gcc_opts, use the default
             # setting from the command line.
             if not re.search('march', cmd):
