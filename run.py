@@ -441,12 +441,6 @@ def gcc_compile(test_list, output_dir, isa, mabi, opts, debug_cmd,
             if not os.path.isfile(asm) and not debug_cmd:
                 logging.error("Cannot find assembly test: {}\n".format(asm))
                 sys.exit(RET_FAIL)
-
-            # Linker script selection
-            linkerscript_to_use = f"{cwd}/scripts/link.ld"
-            if linkerscript_path != "":
-                linkerscript_to_use = linkerscript_path
-
             # gcc compilation
             cmd = ("{} -static -mcmodel=medany \
              -fvisibility=hidden -nostdlib \
@@ -454,7 +448,7 @@ def gcc_compile(test_list, output_dir, isa, mabi, opts, debug_cmd,
              -I{}/user_extension \
              -T{} {} -o {} ".format(
                 get_env_var("RISCV_GCC", debug_cmd=debug_cmd), asm, cwd,
-                linkerscript_to_use, opts, elf))
+                linkerscript_path, opts, elf))
             if 'gcc_opts' in test:
                 cmd += test['gcc_opts']
             if 'gen_opts' in test:
@@ -511,12 +505,6 @@ def run_assembly(asm_test, iss_yaml, isa, mabi, gcc_opts, iss_opts, output_dir,
     iss_list = iss_opts.split(",")
     run_cmd("mkdir -p {}/directed_asm_test".format(output_dir))
     logging.info("Compiling assembly test : {}".format(asm_test))
-
-    # Linker script selection
-    linkerscript_to_use = f"{cwd}/scripts/link.ld"
-    if linkerscript_path != "":
-        linkerscript_to_use = linkerscript_path
-
     # gcc compilation
     cmd = ("{} -static -mcmodel=medany \
          -fvisibility=hidden -nostdlib \
@@ -524,7 +512,7 @@ def run_assembly(asm_test, iss_yaml, isa, mabi, gcc_opts, iss_opts, output_dir,
          -I{}/user_extension \
          -T{} {} -o {} ".format(
         get_env_var("RISCV_GCC", debug_cmd=debug_cmd), asm_test, cwd,
-        linkerscript_to_use, gcc_opts, elf))
+        linkerscript_path, gcc_opts, elf))
     cmd += (" -march={}".format(isa))
     cmd += (" -mabi={}".format(mabi))
     run_cmd_output(cmd.split(), debug_cmd=debug_cmd)
@@ -614,19 +602,13 @@ def run_c(c_test, iss_yaml, isa, mabi, gcc_opts, iss_opts, output_dir,
     iss_list = iss_opts.split(",")
     run_cmd("mkdir -p {}/directed_c_test".format(output_dir))
     logging.info("Compiling c test : {}".format(c_test))
-
-    # Linker script selection
-    linkerscript_to_use = f"{cwd}/scripts/link.ld"
-    if linkerscript_path != "":
-        linkerscript_to_use = linkerscript_path
-
     # gcc compilation
     cmd = ("{} -mcmodel=medany -nostdlib \
          -nostartfiles {} \
          -I{}/user_extension \
          -T{} {} -o {} ".format(
         get_env_var("RISCV_GCC", debug_cmd=debug_cmd), c_test, cwd,
-        linkerscript_to_use, gcc_opts, elf))
+        linkerscript_path, gcc_opts, elf))
     cmd += (" -march={}".format(isa))
     cmd += (" -mabi={}".format(mabi))
     run_cmd_output(cmd.split(), debug_cmd=debug_cmd)
@@ -848,8 +830,9 @@ def parse_args(cwd):
                         help="Compile options for the generator")
     parser.add_argument("--sim_opts", type=str, default="",
                         help="Simulation options for the generator")
-    parser.add_argument("--linkerscript_path", type=str, default="",
-                        help="Absolute path to custom linker script")
+    parser.add_argument("--linkerscript_path", type=str,
+                        default=os.path.join(cwd, "scripts", "link.ld"),
+                        help="Path to linker script (default: scripts/link.ld)")
     parser.add_argument("--gcc_opts", type=str, default="",
                         help="GCC compile options")
     parser.add_argument("-s", "--steps", type=str, default="all",
@@ -928,6 +911,11 @@ def parse_args(cwd):
                            "Cannot be used with --start_seed or --seed."))
 
     args = parser.parse_args()
+
+    if not os.path.isfile(args.linkerscript_path):
+        logging.error('--linkerscript_path does not point to an existing file: '
+                      f'{args.linkerscript_path}')
+        sys.exit(RET_FAIL)
 
     if args.seed is not None and args.start_seed is not None:
         logging.error('--start_seed and --seed are mutually exclusive.')
